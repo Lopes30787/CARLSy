@@ -77,7 +77,7 @@ print(tokenized_dataset["train"][0])
 data_collator = DataCollatorWithPadding(tokenizer)
 
 train_args = Seq2SeqTrainingArguments(output_dir='./results/baidu/finetune/task22-lowdata',evaluation_strategy = 'epoch',
-                                per_device_train_batch_size=32,weight_decay=0, learning_rate= 0.00005,
+                                per_device_train_batch_size=2,weight_decay=0, learning_rate= 0.00005,
                                 num_train_epochs=100,lr_scheduler_type='constant_with_warmup',warmup_ratio=0.1,logging_strategy='steps',
                                 save_strategy='epoch',fp16_backend = 'amp',fp16 = False,gradient_accumulation_steps = 2,
                                 load_best_model_at_end = True,logging_steps = 1, predict_with_generate = True)#,deepspeed='./zero2_auto_config.json', save_total_limit = 3)
