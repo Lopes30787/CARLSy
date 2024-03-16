@@ -21,13 +21,17 @@ import evaluate
 
 import pandas as pd
 
+import nltk
+
 import os
+
+from transformers import DataCollatorForSeq2Seq
 
 # Select GPUs
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 # Define Tokenizer and Model
-tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small", return_tensors="pt")
+tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small")
 
 model = AutoModel.from_pretrained("google/flan-t5-small")
 
@@ -78,58 +82,69 @@ def tokenize_function(examples):
 tokenized_dataset = chess_dataset.map(tokenize_function, batched=True)
 
 # Remove unneeded columns 
-tokenized_dataset = tokenized_dataset.remove_columns(["id","algebraic_notation", "commentary", "Notation:Commentary"])
-tokenized_dataset = tokenized_dataset.with_format("torch")
+# tokenized_dataset = tokenized_dataset.remove_columns(["id","algebraic_notation", "commentary", "Notation:Commentary"])
+# tokenized_dataset = tokenized_dataset.with_format("torch")
 
 print(tokenizer.convert_ids_to_tokens(tokenized_dataset["train"][0]["input_ids"]))
 print(tokenized_dataset["train"][0])
 
 # Pad the input for each batch instead of globally to save during training
-data_collator = DataCollatorWithPadding(tokenizer)
+data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
-train_args = Seq2SeqTrainingArguments(output_dir='./results/baidu/finetune/task22-lowdata',evaluation_strategy = 'epoch',
-                                per_device_train_batch_size=2,weight_decay=0, learning_rate= 0.00005,
-                                num_train_epochs=100,lr_scheduler_type='constant_with_warmup',warmup_ratio=0.1,logging_strategy='steps',
-                                save_strategy='epoch',fp16_backend = 'amp',fp16 = False,gradient_accumulation_steps = 2,
-                                load_best_model_at_end = True,logging_steps = 1, predict_with_generate = True)#,deepspeed='./zero2_auto_config.json', save_total_limit = 3)
+# Global Parameters
+L_RATE = 3e-4
+BATCH_SIZE = 8
+PER_DEVICE_EVAL_BATCH = 4
+WEIGHT_DECAY = 0.01
+SAVE_TOTAL_LIM = 3
+NUM_EPOCHS = 3
+
+# Set up training arguments
+training_args = Seq2SeqTrainingArguments(
+   output_dir="./results",
+   evaluation_strategy="epoch",
+   learning_rate=L_RATE,
+   per_device_train_batch_size=BATCH_SIZE,
+   per_device_eval_batch_size=PER_DEVICE_EVAL_BATCH,
+   weight_decay=WEIGHT_DECAY,
+   save_total_limit=SAVE_TOTAL_LIM,
+   num_train_epochs=NUM_EPOCHS,
+   predict_with_generate=True,
+   push_to_hub=False
+)
+
 metric = evaluate.load("sacrebleu")
 
 def postprocess_text(preds, labels):
     preds = [pred.strip() for pred in preds]
     labels = [[label.strip()] for label in labels]
 
+nltk.download("punkt", quiet=True)
+metric = evaluate.load("rouge")
+
 def compute_metrics(eval_preds):
-    # print(preds)
-    preds, labels = eval_preds
-    #print('preds:',preds[0])
-    # print('len:',preds[0].shape)
-    if isinstance(preds, tuple):
-        preds = preds[0]
-    print('preds:',preds)
-    decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
-    # if data_args.ignore_pad_token_for_loss:
-    #     # Replace -100 in the labels as we can't decode them.
-    #     labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-    decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+   preds, labels = eval_preds
 
-    # Some simple post-processing
-    decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+   # decode preds and labels
+   labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+   decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+   decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
-    result = metric.compute(predictions=decoded_preds, references=decoded_labels)
-    result = {"bleu": result["score"]}
+   # rougeLSum expects newline after each sentence
+   decoded_preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds]
+   decoded_labels = ["\n".join(nltk.sent_tokenize(label.strip())) for label in decoded_labels]
 
-    prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
-    result["gen_len"] = np.mean(prediction_lens)
-    result = {k: round(v, 4) for k, v in result.items()}
-    return result
+   result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
+  
+   return result
 
 trainer = Trainer(
-    model,
-    train_args,
-    train_dataset=tokenized_dataset["train"],
-    eval_dataset=tokenized_dataset["valid"],
-    data_collator=data_collator,
-    tokenizer=tokenizer,
+    model = model,
+    args = training_args,
+    train_dataset = tokenized_dataset["train"],
+    eval_dataset = tokenized_dataset["valid"],
+    tokenizer = tokenizer,
+    data_collator = data_collator,
     compute_metrics=compute_metrics,
 )
 
