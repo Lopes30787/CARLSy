@@ -87,6 +87,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 model.to(device)
+print(f"Using device: {device}")
 # Define Accelerator
 #accelerator = Accelerator()
 #model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
