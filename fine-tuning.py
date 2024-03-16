@@ -135,8 +135,7 @@ for epoch in range(num_epochs):
         outputs = model(**batch)
         
         # Obtain Loss
-        batch_loss = outputs[0]
-        loss = batch_loss.item()    
+        loss = outputs[0]
     
         accelerator.backward(loss)
 
