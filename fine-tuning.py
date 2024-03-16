@@ -133,7 +133,11 @@ for epoch in range(num_epochs):
 
     for batch in train_dataloader:
         outputs = model(**batch)
-        loss = outputs.loss
+        
+        # Obtain Loss
+        batch_loss = outputs[0]
+        loss = batch_loss.item()    
+    
         accelerator.backward(loss)
 
         optimizer.step()
