@@ -21,7 +21,7 @@ import pandas as pd
 import os
 
 # Select GPUs
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 # Define Tokenizer and Model
 tokenizer = AutoTokenizer.from_pretrained("openai-community/gpt2", return_tensors="pt")
