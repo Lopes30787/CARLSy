@@ -29,7 +29,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 # Define Tokenizer and Model
 tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small", return_tensors="pt")
 
-model = AutoModel.from_pretrained("ogoogle/flan-t5-small")
+model = AutoModel.from_pretrained("google/flan-t5-small")
 
 # Add Padding token if Tokenizer doesn't have one
 if tokenizer.pad_token is None:
