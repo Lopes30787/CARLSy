@@ -85,11 +85,13 @@ test_dataloader = DataLoader(
 # Define optimizer and learning rate
 optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+model.to(device)
 # Define Accelerator
-accelerator = Accelerator()
-model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
-    model, optimizer, train_dataloader, test_dataloader
-)
+#accelerator = Accelerator()
+#model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
+#    model, optimizer, train_dataloader, test_dataloader
+#)
 
 # Define learning rate scheduler
 num_epochs = 3
@@ -132,12 +134,14 @@ for epoch in range(num_epochs):
     model.train()
 
     for batch in train_dataloader:
+        batch = {k: v.to(device) for k, v in batch.items()}
         outputs = model(**batch)
         
         # Obtain Loss
         loss = outputs[0]
     
-        accelerator.backward(loss)
+        #accelerator.backward(loss)
+        loss.backward()
 
         optimizer.step()
         lr_scheduler.step()
