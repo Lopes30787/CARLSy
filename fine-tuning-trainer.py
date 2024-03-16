@@ -3,6 +3,7 @@ from transformers import DataCollatorWithPadding
 from transformers import get_scheduler
 from transformers import TrainingArguments
 from transformers import Trainer
+from transformers import Seq2SeqTrainingArguments
 
 from datasets import Dataset, DatasetDict
 
@@ -75,8 +76,11 @@ print(tokenized_dataset["train"][0])
 # Pad the input for each batch instead of globally to save during training
 data_collator = DataCollatorWithPadding(tokenizer)
 
-training_args = TrainingArguments("finetuned_model", predict_with_generate = True)
-
+train_args = Seq2SeqTrainingArguments(output_dir='./results/baidu/finetune/task22-lowdata',evaluation_strategy = 'epoch',
+                                per_device_train_batch_size=32,weight_decay=0, learning_rate= 0.00005,
+                                num_train_epochs=100,lr_scheduler_type='constant_with_warmup',warmup_ratio=0.1,logging_strategy='steps',
+                                save_strategy='epoch',fp16_backend = 'amp',fp16 = False,gradient_accumulation_steps = 2,
+                                load_best_model_at_end = True,logging_steps = 1, predict_with_generate = True)#,deepspeed='./zero2_auto_config.json', save_total_limit = 3)
 metric = evaluate.load("sacrebleu")
 
 def postprocess_text(preds, labels):
@@ -110,7 +114,7 @@ def compute_metrics(eval_preds):
 
 trainer = Trainer(
     model,
-    training_args,
+    train_args,
     train_dataset=tokenized_dataset["train"],
     eval_dataset=tokenized_dataset["valid"],
     data_collator=data_collator,
