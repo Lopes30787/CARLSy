@@ -75,11 +75,11 @@ data_collator = DataCollatorWithPadding(tokenizer)
 
 #Create Dataloaders
 train_dataloader = DataLoader(
-    tokenized_dataset["train"], batch_size= 16, shuffle= True, collate_fn= data_collator
+    tokenized_dataset["train"], batch_size= 8, shuffle= True, collate_fn= data_collator
 )
 
 test_dataloader = DataLoader(
-    tokenized_dataset["test"], batch_size= 16, shuffle= True, collate_fn= data_collator
+    tokenized_dataset["test"], batch_size= 8, shuffle= True, collate_fn= data_collator
 )
 
 # Define optimizer and learning rate
