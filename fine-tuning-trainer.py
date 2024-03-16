@@ -61,8 +61,19 @@ chess_dataset = DatasetDict({
 #small_eval_dataset = chess_dataset["test"].shuffle(seed=42).select(range(100))
 
 # Tokenize the dataset
-def tokenize_function(dataset):
-    return tokenizer(dataset["Notation:Commentary"], truncation= True)
+def tokenize_function(examples):
+   """Add prefix to the sentences, tokenize the text, and set the labels"""
+   # The "inputs" are the tokenized answer:
+   inputs = [doc for doc in examples["algebraic_notation"]]
+   model_inputs = tokenizer(inputs, max_length=128, truncation=True)
+  
+   # The "labels" are the tokenized outputs:
+   labels = tokenizer(text_target=examples["commentary"], 
+                      max_length=512,         
+                      truncation=True)
+
+   model_inputs["labels"] = labels["input_ids"]
+   return model_inputs
 
 tokenized_dataset = chess_dataset.map(tokenize_function, batched=True)
 
