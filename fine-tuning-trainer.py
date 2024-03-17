@@ -2,7 +2,7 @@ from transformers import AutoTokenizer, AutoModel
 from transformers import DataCollatorWithPadding
 from transformers import get_scheduler
 from transformers import TrainingArguments
-from transformers import Trainer
+from transformers import Seq2SeqTrainer
 from transformers import Seq2SeqTrainingArguments
 
 from datasets import Dataset, DatasetDict
@@ -138,7 +138,7 @@ def compute_metrics(eval_preds):
   
    return result
 
-trainer = Trainer(
+trainer = Seq2SeqTrainer(
     model = model,
     args = training_args,
     train_dataset = tokenized_dataset["train"],
