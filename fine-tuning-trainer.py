@@ -79,7 +79,7 @@ def tokenize_function(examples):
    model_inputs["labels"] = labels["input_ids"]
    return model_inputs
 
-tokenized_dataset = chess_dataset.map(tokenize_function, batched=True)
+tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_columns =["id","algebraic_notation", "commentary", "Notation:Commentary"])
 
 # Remove unneeded columns 
 # tokenized_dataset = tokenized_dataset.remove_columns(["id","algebraic_notation", "commentary", "Notation:Commentary"])
