@@ -76,7 +76,7 @@ def tokenize_function(examples):
                       max_length=512,         
                       truncation=True)
 
-   model_inputs["labels"] = labels["input_ids"]
+   model_inputs["decoder_input_ids"] = labels["input_ids"]
    return model_inputs
 
 tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_columns =["id","algebraic_notation", "commentary", "Notation:Commentary"])
@@ -88,9 +88,7 @@ tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_co
 print(tokenizer.convert_ids_to_tokens(tokenized_dataset["train"][0]["input_ids"]))
 print(tokenized_dataset["train"][0])
 
-# Pad the input for each batch instead of globally to save during training
-data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
-
+data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 # Global Parameters
 L_RATE = 3e-4
 BATCH_SIZE = 8
