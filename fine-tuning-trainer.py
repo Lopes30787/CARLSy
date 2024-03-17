@@ -76,7 +76,7 @@ def tokenize_function(examples):
                       max_length=512,         
                       truncation=True)
 
-   model_inputs["decoder_input_ids"] = labels["input_ids"]
+   model_inputs["labels"] = labels["input_ids"]
    return model_inputs
 
 tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_columns =["id","algebraic_notation", "commentary", "Notation:Commentary"])
