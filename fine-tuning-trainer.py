@@ -76,7 +76,7 @@ def tokenize_function(examples):
                       max_length=512,         
                       truncation=True)
 
-   model_inputs["labels"] = labels["input_ids"]
+   model_inputs["decoder_input_ids"] = labels["input_ids"]
    return model_inputs
 
 tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_columns =["id","algebraic_notation", "commentary", "Notation:Commentary"])
@@ -112,8 +112,6 @@ training_args = Seq2SeqTrainingArguments(
    predict_with_generate=True,
    push_to_hub=False
 )
-
-metric = evaluate.load("sacrebleu")
 
 def postprocess_text(preds, labels):
     preds = [pred.strip() for pred in preds]
