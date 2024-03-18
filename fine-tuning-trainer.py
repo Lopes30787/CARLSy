@@ -1,17 +1,9 @@
-from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM
-from transformers import DataCollatorWithPadding
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from transformers import get_scheduler
-from transformers import TrainingArguments
 from transformers import Seq2SeqTrainer
 from transformers import Seq2SeqTrainingArguments
 
 from datasets import Dataset, DatasetDict
-
-from accelerate import Accelerator
-
-from torch.utils.data import DataLoader
-from torch.optim import AdamW
-import torch
 
 from tqdm.auto import tqdm
 
@@ -82,10 +74,6 @@ def tokenize_function(examples):
 
 tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_columns =["id","algebraic_notation", "commentary", "Notation:Commentary"])
 
-# Remove unneeded columns 
-# tokenized_dataset = tokenized_dataset.remove_columns(["id","algebraic_notation", "commentary", "Notation:Commentary"])
-# tokenized_dataset = tokenized_dataset.with_format("torch")
-
 print(tokenizer.convert_ids_to_tokens(tokenized_dataset["train"][0]["input_ids"]))
 print(tokenized_dataset["train"][0])
 
@@ -117,10 +105,16 @@ def postprocess_text(preds, labels):
     preds = [pred.strip() for pred in preds]
     labels = [[label.strip()] for label in labels]
 
-nltk.download("punkt", quiet=True)
-metric = evaluate.load("rouge")
+    return preds, labels
 
-def compute_metrics(eval_preds):
+# Rouge Metric
+nltk.download("punkt", quiet=True)
+rouge = evaluate.load("rouge")
+
+# Bleu Metric
+bleu = evaluate.load("sacrebleu")
+
+def compute_rouge(eval_preds):
    preds, labels = eval_preds
 
    # decode preds and labels
@@ -132,9 +126,35 @@ def compute_metrics(eval_preds):
    decoded_preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds]
    decoded_labels = ["\n".join(nltk.sent_tokenize(label.strip())) for label in decoded_labels]
 
-   result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
+   rouge_res = rouge.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
   
-   return result
+   return rouge_res
+
+def compute_bleu(eval_preds):
+    preds, labels = eval_preds
+
+    if isinstance(preds, tuple):
+        preds = preds[0]
+
+    decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+    decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+    # Some simple post-processing
+    decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+
+    result = bleu.compute(predictions=decoded_preds, references=decoded_labels)
+    result = {"bleu": result["score"]}
+
+    prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
+    result["gen_len"] = np.mean(prediction_lens)
+    result = {k: round(v, 4) for k, v in result.items()}
+    return result
+
+def compute_metrics(eval_preds):
+    rouge = compute_rouge(eval_preds)
+    bleu = compute_bleu(eval_preds)
+
+    return rouge, bleu
 
 trainer = Seq2SeqTrainer(
     model = model,
