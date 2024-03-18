@@ -86,6 +86,7 @@ PER_DEVICE_EVAL_BATCH = 2
 WEIGHT_DECAY = 0.01
 SAVE_TOTAL_LIM = 3
 NUM_EPOCHS = 3
+MAX_LENGTH = 100
 
 # Set up training arguments
 training_args = Seq2SeqTrainingArguments(
@@ -98,7 +99,8 @@ training_args = Seq2SeqTrainingArguments(
    save_total_limit=SAVE_TOTAL_LIM,
    num_train_epochs=NUM_EPOCHS,
    predict_with_generate=True,
-   push_to_hub=False
+   push_to_hub=False,
+   generation_max_length=MAX_LENGTH
 )
 
 def postprocess_text(preds, labels):
@@ -155,7 +157,7 @@ def compute_metrics(eval_preds):
     rouge = compute_rouge(eval_preds)
     bleu = compute_bleu(eval_preds)
 
-    return rouge, bleu
+    return {'rouge': rouge, 'bleu': bleu}
 
 trainer = Seq2SeqTrainer(
     model = model,
