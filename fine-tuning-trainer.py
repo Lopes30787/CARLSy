@@ -28,7 +28,8 @@ import os
 from transformers import DataCollatorForSeq2Seq
 
 # Select GPUs
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["TOKENIZERS_PARALLELISM"]= "false"
 
 # Define Tokenizer and Model
 tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small")
