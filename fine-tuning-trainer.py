@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM
 from transformers import DataCollatorWithPadding
 from transformers import get_scheduler
 from transformers import TrainingArguments
@@ -33,7 +33,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 # Define Tokenizer and Model
 tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small")
 
-model = AutoModel.from_pretrained("google/flan-t5-small")
+model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-small")
 
 # Add Padding token if Tokenizer doesn't have one
 if tokenizer.pad_token is None:
