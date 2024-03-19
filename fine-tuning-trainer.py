@@ -74,8 +74,8 @@ def tokenize_function(examples):
 
 tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_columns =["id","algebraic_notation", "commentary", "Notation:Commentary"])
 
-print(tokenizer.convert_ids_to_tokens(tokenized_dataset["train"][0]["input_ids"]))
-print(tokenized_dataset["train"][0])
+#print(tokenizer.convert_ids_to_tokens(tokenized_dataset["train"][0]["input_ids"]))
+#print(tokenized_dataset["train"][0])
 
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
@@ -110,7 +110,6 @@ def postprocess_text(preds, labels):
     return preds, labels
 
 # Rouge Metric
-nltk.download("punkt", quiet=True)
 rouge = evaluate.load("rouge")
 
 # Bleu Metric
