@@ -81,7 +81,7 @@ data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 # Global Parameters
 L_RATE = 3e-4
-BATCH_SIZE = 2
+BATCH_SIZE = 4
 PER_DEVICE_EVAL_BATCH = 2
 WEIGHT_DECAY = 0.01
 SAVE_TOTAL_LIM = 3
@@ -90,17 +90,17 @@ MAX_LENGTH = 100
 
 # Set up training arguments
 training_args = Seq2SeqTrainingArguments(
-   output_dir="./results",
-   evaluation_strategy="epoch",
-   learning_rate=L_RATE,
-   per_device_train_batch_size=BATCH_SIZE,
-   per_device_eval_batch_size=PER_DEVICE_EVAL_BATCH,
-   weight_decay=WEIGHT_DECAY,
-   save_total_limit=SAVE_TOTAL_LIM,
-   num_train_epochs=NUM_EPOCHS,
-   predict_with_generate=True,
-   push_to_hub=False,
-   generation_max_length=MAX_LENGTH
+    output_dir="./results",
+    evaluation_strategy="epoch",
+    learning_rate=L_RATE,
+    per_device_train_batch_size=BATCH_SIZE,
+    per_device_eval_batch_size=PER_DEVICE_EVAL_BATCH,
+    weight_decay=WEIGHT_DECAY,
+    save_total_limit=SAVE_TOTAL_LIM,
+    num_train_epochs=NUM_EPOCHS,
+    predict_with_generate=True,
+    push_to_hub=False,
+    generation_max_length=MAX_LENGTH
 )
 
 def postprocess_text(preds, labels):
@@ -116,22 +116,27 @@ rouge = evaluate.load("rouge")
 # Bleu Metric
 bleu = evaluate.load("sacrebleu")
 
-def compute_rouge(eval_preds):
-   preds, labels = eval_preds
+# Meteor Metric
+meteor = evaluate.load("meteor")
 
-   # decode preds and labels
-   preds = np.where(preds != -100, preds, tokenizer.pad_token_id)
-   labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-   decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
-   decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+def compute_meteor_rouge(eval_preds):
+    preds, labels = eval_preds
 
-   # rougeLSum expects newline after each sentence
-   decoded_preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds]
-   decoded_labels = ["\n".join(nltk.sent_tokenize(label.strip())) for label in decoded_labels]
+    # decode preds and labels
+    preds = np.where(preds != -100, preds, tokenizer.pad_token_id)
+    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+    decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+    decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
-   rouge_res = rouge.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
+    meteor_res = meteor.compute(predictions=decoded_preds, references=decoded_labels)
+
+    # rougeLSum expects newline after each sentence
+    decoded_preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds]
+    decoded_labels = ["\n".join(nltk.sent_tokenize(label.strip())) for label in decoded_labels]
+
+    rouge_res = rouge.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
   
-   return rouge_res
+    return meteor_res, rouge_res
 
 def compute_bleu(eval_preds):
     preds, labels = eval_preds
@@ -156,10 +161,10 @@ def compute_bleu(eval_preds):
     return result
 
 def compute_metrics(eval_preds):
-    rouge = compute_rouge(eval_preds)
+    meteor, rouge = compute_meteor_rouge(eval_preds)
     bleu = compute_bleu(eval_preds)
 
-    return {'rouge': rouge, 'bleu': bleu}
+    return {'meteor': meteor, 'rouge': rouge, 'bleu': bleu}
 
 trainer = Seq2SeqTrainer(
     model = model,
