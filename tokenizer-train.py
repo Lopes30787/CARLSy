@@ -23,20 +23,10 @@ df['Notation:Commentary'] = df['algebraic_notation'] + ": " + df['commentary']
 # Load Dataset from Pandas DataFrame
 chess_dataset = Dataset.from_pandas(df)
 
-# Separate Dataset into train, validation and test datasets
-chess_dataset = chess_dataset.train_test_split(test_size= 0.1)
-chess_dataset_2 = chess_dataset['test'].train_test_split(test_size=0.5)
-
-chess_dataset = DatasetDict({
-    'train': chess_dataset['train'],
-    'valid': chess_dataset_2['train'],
-    'test': chess_dataset_2['test']
-})
-
 def get_training_corpus():
     return (
-        chess_dataset["train"][i : i + 1000]["Notation:Commentary"]
-        for i in range(0, len(chess_dataset["train"]), 1000)
+        chess_dataset[i : i + 1000]["Notation:Commentary"]
+        for i in range(0, len(chess_dataset), 1000)
     )
 
 training_corpus = get_training_corpus()
