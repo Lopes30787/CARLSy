@@ -41,6 +41,6 @@ def get_training_corpus():
 
 training_corpus = get_training_corpus()
 
-tokenizer = old_tokenizer.train_new_from_iterator(training_corpus, 52000)
+tokenizer = old_tokenizer.train_new_from_iterator(training_corpus, 32128)
 
 tokenizer.save_pretrained("flanT5-finetuned")
