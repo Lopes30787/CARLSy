@@ -18,10 +18,10 @@ print("Pretrained:")
 print(tokenizer.batch_decode(outputs, skip_special_tokens=True))
 
 outputs = model_tokenizer.generate(**inputs_2)
-print("Pretrained:")
+print("Finetuned:")
 print(tokenizer_finetuned.batch_decode(outputs, skip_special_tokens=True))
 
-print("Dataset")
+print("Dataset:")
 print("Now white has a full passed pawn, and black has little compensation for it. Tornbetween Rd8 to threaten the d5 pawn, Bd6 to hold rank and improve queenmobility, and c4 to prevent white playing c4 first.  I don't like c4 asI cannot easily defend it and it gives white the threat of Bb6.  Bd6 allowsme to follow with Qe7 and Nd7 will allow me to start pushing back on thekingside.  Rc-d8 lessens the defence on the c5 pawn, which cannot now havea pawn for support. Rf-d8 makes a later f5 pawn push less effective, andleaves the c8 rook with nowhere to go. In each of these cases white canjust play c4 and I have no threats.  Bd6 with the intent of Qe7 and Nd7seems the only option, with hopefully an f4 push to follow. With the knightand bishop defending c5 and e5 the rooks should be free to get some actionagain.")
 print("And with triple repeat game was decided as draw.")
 print("A discovered attack on the g2 pawn, as well as an attack on f2.")
