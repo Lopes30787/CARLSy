@@ -1,7 +1,11 @@
 from transformers import pipeline 
+import os
 
-pretrained_tokenizer = pipeline("text2text-generation", model="")
-finetuned_tokenizer =  pipeline("text2text-generation", model="")
+# Select GPUs
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+pretrained_tokenizer = pipeline("text2text-generation", model="./results/checkpoint-236000")
+finetuned_tokenizer =  pipeline("text2text-generation", model="./results-tokenizer/checkpoint-236000")
 
 print("Pretrained:")
 print(pretrained_tokenizer("1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6  6. Be2 e5 7. Nb3 Be7 8. O-O O-O  9. Be3 Be6 10. Qd2 Nbd7 11. a4 Rc8 12. a5 Qc7 13. Rfd1  Nc5 14. Nxc5 dxc5 15. Nd5 Bxd5 16. exd5"))
