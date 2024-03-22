@@ -5,7 +5,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 model = AutoModelForSeq2SeqLM.from_pretrained("./results/checkpoint-236000")
-model_tokenizer = AutoModelForSeq2SeqLM.from_pretrained("/results-tokenizer/checkpoint-236000")
+model_tokenizer = AutoModelForSeq2SeqLM.from_pretrained("./results-tokenizer/checkpoint-236000")
 
 tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small")
 tokenizer_finetuned = AutoTokenizer.from_pretrained("/cfs/home/u024219/Tese/CARLSy/flanT5-finetuned")
