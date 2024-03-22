@@ -81,11 +81,11 @@ data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 # Global Parameters
 L_RATE = 3e-4
-BATCH_SIZE = 4
-PER_DEVICE_EVAL_BATCH = 2
+BATCH_SIZE = 8
+PER_DEVICE_EVAL_BATCH = 8
 WEIGHT_DECAY = 0.01
 SAVE_TOTAL_LIM = 3
-NUM_EPOCHS = 3
+NUM_EPOCHS = 5
 MAX_LENGTH = 100
 
 # Set up training arguments
@@ -100,7 +100,9 @@ training_args = Seq2SeqTrainingArguments(
     num_train_epochs=NUM_EPOCHS,
     predict_with_generate=True,
     push_to_hub=False,
-    generation_max_length=MAX_LENGTH
+    generation_max_length=MAX_LENGTH,
+    report_to="tensorboard",
+    logging_dir="./tb_logs"
 )
 
 def postprocess_text(preds, labels):
