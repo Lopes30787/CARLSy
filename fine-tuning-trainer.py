@@ -80,13 +80,13 @@ tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_co
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 # Global Parameters
-L_RATE = 3e-4
+L_RATE = 5e-4
 BATCH_SIZE = 8
 PER_DEVICE_EVAL_BATCH = 8
-WEIGHT_DECAY = 0.01
+WEIGHT_DECAY = 0.2
 SAVE_TOTAL_LIM = 3
 NUM_EPOCHS = 5
-MAX_LENGTH = 100
+MAX_LENGTH = 200
 
 # Set up training arguments
 training_args = Seq2SeqTrainingArguments(
