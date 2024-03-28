@@ -39,7 +39,7 @@ df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/datasets/chess_dataset_extended.
 df = pd.DataFrame(df)
 df = df.dropna()
 
-df['Training'] ="[PGN]" + df['algebraic_notation'] + " [BOARD]" + df['positions'] + "[ATTACKS] " + df['attacks'] 
+df['Training'] ="[PGN]" + df['algebraic_notation'] + ["MOVE"] + df['move'] + "[BOARD]" + df['positions'] + "[ATTACKS] " + df['attacks'] 
 
 # Load Dataset from Pandas DataFrame
 chess_dataset = Dataset.from_pandas(df)
