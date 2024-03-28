@@ -24,7 +24,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["TOKENIZERS_PARALLELISM"]= "false"
 
 # Define Tokenizer and Model
-tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small")
+tokenizer = AutoTokenizer.from_pretrained("/cfs/home/u024219/Tese/CARLSy/flanT5-finetuned")
 
 model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-small")
 
@@ -34,11 +34,12 @@ if tokenizer.pad_token is None:
     model.resize_token_embeddings(len(tokenizer))
 
 # Put the dataset in a Pandas DataFrame
-df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/chess_dataset.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
+df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/datasets/chess_dataset_extended.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
 #df = pd.read_csv('C:\\Users\\afons\\Ambiente de Trabalho\\dataset\\chess_dataset.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
 df = pd.DataFrame(df)
+df = df.dropna()
 
-df['Notation:Commentary'] = df['algebraic_notation'] + ": " + df['commentary']
+df['Training'] ="[PGN]" + df['algebraic_notation'] + " [BOARD]" + df['positions'] + "[ATTACKS] " + df['attacks'] 
 
 # Load Dataset from Pandas DataFrame
 chess_dataset = Dataset.from_pandas(df)
@@ -61,8 +62,8 @@ chess_dataset = DatasetDict({
 def tokenize_function(examples):
    """Add prefix to the sentences, tokenize the text, and set the labels"""
    # The "inputs" are the tokenized answer:
-   inputs = [doc for doc in examples["algebraic_notation"]]
-   model_inputs = tokenizer(inputs, max_length=128, truncation=True)
+   inputs = [doc for doc in examples["Training"]]
+   model_inputs = tokenizer(inputs, max_length=512, truncation = True)
   
    # The "labels" are the tokenized outputs:
    labels = tokenizer(text_target=examples["commentary"], 
@@ -72,7 +73,7 @@ def tokenize_function(examples):
    model_inputs["labels"] = labels["input_ids"]
    return model_inputs
 
-tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_columns =["id","algebraic_notation", "commentary", "Notation:Commentary"])
+tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_columns =["id","algebraic_notation", "commentary", "Training"])
 
 #print(tokenizer.convert_ids_to_tokens(tokenized_dataset["train"][0]["input_ids"]))
 #print(tokenized_dataset["train"][0])
@@ -80,17 +81,17 @@ tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_co
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 # Global Parameters
-L_RATE = 5e-4
+L_RATE = 3e-4
 BATCH_SIZE = 8
 PER_DEVICE_EVAL_BATCH = 8
-WEIGHT_DECAY = 0.2
+WEIGHT_DECAY = 0.01
 SAVE_TOTAL_LIM = 3
 NUM_EPOCHS = 5
 MAX_LENGTH = 200
 
 # Set up training arguments
 training_args = Seq2SeqTrainingArguments(
-    output_dir="./results",
+    output_dir="./results/tokenizer-finetuned/results-extended",
     evaluation_strategy="epoch",
     learning_rate=L_RATE,
     per_device_train_batch_size=BATCH_SIZE,
@@ -102,7 +103,7 @@ training_args = Seq2SeqTrainingArguments(
     push_to_hub=False,
     generation_max_length=MAX_LENGTH,
     report_to="tensorboard",
-    logging_dir="./tb_logs"
+    logging_dir="./tb_logs/tokenizer-extended"
 )
 
 def postprocess_text(preds, labels):
