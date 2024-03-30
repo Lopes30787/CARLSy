@@ -17,6 +17,7 @@ old_tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small")
 df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/datasets/chess_dataset_extended_with_move.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
 #df = pd.read_csv('C:\\Users\\afons\\Ambiente de Trabalho\\dataset\\chess_dataset.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
 df = pd.DataFrame(df)
+df = df.dropna()
 
 df['Training'] ="[PGN]" + df['algebraic_notation'] + ["MOVE"] + df['move'] + "[BOARD]" + df['positions'] + "[ATTACKS] " + df['attacks'] + "[COMMENTARY]" + df['commentary']
 
