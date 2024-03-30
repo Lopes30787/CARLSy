@@ -25,7 +25,7 @@ os.environ["TOKENIZERS_PARALLELISM"]= "false"
 
 # Define Tokenizer and Model
 tokenizer = AutoTokenizer.from_pretrained("/cfs/home/u024219/Tese/CARLSy/flanT5-finetuned")
-
+tokenizer.model_max_length = 4096
 model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-small")
 
 # Add Padding token if Tokenizer doesn't have one
@@ -34,7 +34,7 @@ if tokenizer.pad_token is None:
     model.resize_token_embeddings(len(tokenizer))
 
 # Put the dataset in a Pandas DataFrame
-df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/datasets/chess_dataset_extended.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
+df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/datasets/chess_dataset_extended_with_move.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
 #df = pd.read_csv('C:\\Users\\afons\\Ambiente de Trabalho\\dataset\\chess_dataset.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
 df = pd.DataFrame(df)
 df = df.dropna()
@@ -63,7 +63,7 @@ def tokenize_function(examples):
    """Add prefix to the sentences, tokenize the text, and set the labels"""
    # The "inputs" are the tokenized answer:
    inputs = [doc for doc in examples["Training"]]
-   model_inputs = tokenizer(inputs, max_length=512, truncation = True)
+   model_inputs = tokenizer(inputs, max_length=4096, truncation = True)
   
    # The "labels" are the tokenized outputs:
    labels = tokenizer(text_target=examples["commentary"], 
@@ -82,8 +82,8 @@ data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 # Global Parameters
 L_RATE = 3e-4
-BATCH_SIZE = 8
-PER_DEVICE_EVAL_BATCH = 8
+BATCH_SIZE = 4
+PER_DEVICE_EVAL_BATCH = 4
 WEIGHT_DECAY = 0.01
 SAVE_TOTAL_LIM = 3
 NUM_EPOCHS = 5
@@ -91,7 +91,7 @@ MAX_LENGTH = 200
 
 # Set up training arguments
 training_args = Seq2SeqTrainingArguments(
-    output_dir="./results/tokenizer-finetuned/results-extended",
+    output_dir="./results/tokenizer-finetuned/results-extended-with-move",
     evaluation_strategy="epoch",
     learning_rate=L_RATE,
     per_device_train_batch_size=BATCH_SIZE,
@@ -103,7 +103,7 @@ training_args = Seq2SeqTrainingArguments(
     push_to_hub=False,
     generation_max_length=MAX_LENGTH,
     report_to="tensorboard",
-    logging_dir="./tb_logs/tokenizer-extended"
+    logging_dir="./tb_logs/tokenizer-extended-with-move"
 )
 
 def postprocess_text(preds, labels):
