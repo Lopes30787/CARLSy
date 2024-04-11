@@ -112,6 +112,9 @@ def postprocess_text(preds, labels):
 
     return preds, labels
 
+# Perplexity Metric
+perplexity = evaluate.load("perplexity")
+
 # Rouge Metric
 rouge = evaluate.load("rouge")
 
@@ -131,6 +134,7 @@ def compute_meteor_rouge(eval_preds):
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
     meteor_res = meteor.compute(predictions=decoded_preds, references=decoded_labels)
+    perplexity_res = perplexity.compute(predictions=decoded_preds, references=decoded_labels)
 
     # rougeLSum expects newline after each sentence
     decoded_preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds]
@@ -138,7 +142,7 @@ def compute_meteor_rouge(eval_preds):
 
     rouge_res = rouge.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
   
-    return meteor_res, rouge_res
+    return meteor_res, rouge_res, perplexity_res
 
 def compute_bleu(eval_preds):
     preds, labels = eval_preds
@@ -163,10 +167,10 @@ def compute_bleu(eval_preds):
     return result
 
 def compute_metrics(eval_preds):
-    meteor, rouge = compute_meteor_rouge(eval_preds)
+    meteor, rouge, perplexity = compute_meteor_rouge(eval_preds)
     bleu = compute_bleu(eval_preds)
 
-    return {'meteor': meteor, 'rouge': rouge, 'bleu': bleu}
+    return {'meteor': meteor, 'rouge': rouge, 'bleu': bleu, 'perplexity': perplexity}
 
 trainer = Seq2SeqTrainer(
     model = model,

@@ -26,13 +26,13 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["TOKENIZERS_PARALLELISM"]= "false"
 
 peft_config = LoraConfig(
-    task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, r=16, lora_alpha=32, lora_dropout=0.01
+    task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, r=16, lora_alpha=32, lora_dropout=0.01, target_modules = ["q", "v"]
 )
 
 # Define Tokenizer and Model
 tokenizer = AutoTokenizer.from_pretrained("/cfs/home/u024219/Tese/CARLSy/flanT5-finetuned")
 tokenizer.model_max_length = 4096
-model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-small")
+model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-base")
 model = get_peft_model(model, peft_config)
 
 # Add Padding token if Tokenizer doesn't have one
@@ -98,7 +98,7 @@ MAX_LENGTH = 200
 
 # Set up training arguments
 training_args = Seq2SeqTrainingArguments(
-    output_dir="./results/tokenizer-finetuned/results-extended-with-move",
+    output_dir="./results/tokenizer-finetuned/base-lora",
     evaluation_strategy="epoch",
     learning_rate=L_RATE,
     per_device_train_batch_size=BATCH_SIZE,
@@ -110,7 +110,8 @@ training_args = Seq2SeqTrainingArguments(
     push_to_hub=False,
     generation_max_length=MAX_LENGTH,
     report_to="tensorboard",
-    logging_dir="./tb_logs/tokenizer-extended-with-move"
+    gradient_accumulation_steps= 4,
+    logging_dir="./tb_logs/base-lora"
 )
 
 def postprocess_text(preds, labels):
@@ -118,6 +119,9 @@ def postprocess_text(preds, labels):
     labels = [[label.strip()] for label in labels]
 
     return preds, labels
+
+# Perplexity Metric
+perplexity = evaluate.load("perplexity")
 
 # Rouge Metric
 rouge = evaluate.load("rouge")
@@ -138,6 +142,7 @@ def compute_meteor_rouge(eval_preds):
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
     meteor_res = meteor.compute(predictions=decoded_preds, references=decoded_labels)
+    perplexity_res = perplexity.compute(predictions=decoded_preds, references=decoded_labels)
 
     # rougeLSum expects newline after each sentence
     decoded_preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds]
@@ -145,7 +150,7 @@ def compute_meteor_rouge(eval_preds):
 
     rouge_res = rouge.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
   
-    return meteor_res, rouge_res
+    return meteor_res, rouge_res, perplexity_res
 
 def compute_bleu(eval_preds):
     preds, labels = eval_preds
@@ -170,10 +175,10 @@ def compute_bleu(eval_preds):
     return result
 
 def compute_metrics(eval_preds):
-    meteor, rouge = compute_meteor_rouge(eval_preds)
+    meteor, rouge, perplexity = compute_meteor_rouge(eval_preds)
     bleu = compute_bleu(eval_preds)
 
-    return {'meteor': meteor, 'rouge': rouge, 'bleu': bleu}
+    return {'meteor': meteor, 'rouge': rouge, 'bleu': bleu, 'perplexity': perplexity}
 
 trainer = Seq2SeqTrainer(
     model = model,
