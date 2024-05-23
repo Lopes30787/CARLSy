@@ -40,7 +40,7 @@ if tokenizer.sep_token is None:
     model.resize_token_embeddings(len(tokenizer))
 
 # Put the dataset in a Pandas DataFrame
-df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/datasets/chess_dataset_small.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
+df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/datasets/chess_dataset_cleanse.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
 #df = pd.read_csv('C:\\Users\\afons\\Ambiente de Trabalho\\dataset\\chess_dataset.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
 df = pd.DataFrame(df)
 df = df.dropna()
@@ -82,9 +82,6 @@ def tokenize_function(examples):
 
 tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_columns =["id", "algebraic_notation", "commentary", "Training", "attacks", "move", "positions", "length"])
 
-#print(tokenizer.convert_ids_to_tokens(tokenized_dataset["train"][0]["input_ids"]))
-#print(tokenized_dataset["train"][0])
-
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 # Global Parameters
@@ -98,7 +95,7 @@ MAX_LENGTH = 200
 
 # Set up training arguments
 training_args = Seq2SeqTrainingArguments(
-    output_dir="./results/tokenizer-finetuned/base-classified",
+    output_dir="./results/tokenizer-finetuned/HP-HP-HP",
     evaluation_strategy="epoch",
     learning_rate=L_RATE,
     per_device_train_batch_size=BATCH_SIZE,
@@ -111,7 +108,7 @@ training_args = Seq2SeqTrainingArguments(
     generation_max_length=MAX_LENGTH,
     report_to="tensorboard",
     gradient_accumulation_steps=4,
-    logging_dir="./tb_logs/base-classified"
+    logging_dir="./tb_logs/HP-HP-HP"
 )
 
 def postprocess_text(preds, labels):
@@ -177,8 +174,14 @@ def compute_metrics(eval_preds):
 
     return {'meteor': meteor, 'rouge': rouge, 'bleu': bleu}
 
+def model_init(trial):
+    return AutoModelForSeq2SeqLM.from_pretrained(
+        "google/flan-t5-base",
+    )
+
 trainer = Seq2SeqTrainer(
-    model = model,
+    model = None,
+    model_init= model_init,
     args = training_args,
     train_dataset = tokenized_dataset["train"],
     eval_dataset = tokenized_dataset["valid"],
@@ -187,4 +190,26 @@ trainer = Seq2SeqTrainer(
     compute_metrics=compute_metrics,
 )
 
-trainer.train()
+#trainer.train()
+
+
+from ray import tune
+
+def compute_objective(eval_preds):
+    return {'bleu': compute_bleu(eval_preds)}
+
+def ray_hp_space(trial):
+    return {
+        "learning_rate": tune.loguniform(1e-6, 1e-4),
+        "weight_decay": tune.loguniform(0.01, 0.2),
+        "per_device_train_batch_size": tune.choice([4,8]),
+        "num_train_epochs": tune.choice([3, 5, 7]),
+    }
+
+trainer.hyperparameter_search(
+    direction="maximize", 
+    backend="ray", 
+    hp_space= ray_hp_space,
+    n_trials=20, # number of trials
+    compute_objective=compute_objective
+)
