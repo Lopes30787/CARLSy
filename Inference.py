@@ -34,3 +34,7 @@ print("Finetuned:")
 print(finetuned_tokenizer("[PGN] 1. e4  d6 2. f4 Nf6 3. Nc3 g6 4. Nf3 Bg7 5. d4 O-O 6. Bd3 Na6 7. O-O c5 8. Be3  Ng4  9. Qd2 Nxe3 10. Qxe3 cxd4  11. Nxd4 Qb6 [BOARD] White R_a1 R_f1 K_g1 P_a2 P_b2 P_c2 P_g2 P_h2 N_c3 B_d3 Q_e3 N_d4 P_e4 P_f4 Black n_a6 q_b6 p_d6 p_g6 p_a7 p_b7 p_e7 p_f7 b_g7 p_h7 r_a8 b_c8 r_f8 k_g8 [ATTACKS] White B_d3$n_a6 Black q_b6$P_b2 q_b6$N_d4 b_g7$N_d4", max_new_tokens = 200))
 print("Dataset:")
 print("Threatens Bxd4 to win the Queen. At the same time threatensat b2.   Or, how you can own the center and still be in immediate trouble!!")
+
+
+print(finetuned_tokenizer("[PGN] 1. d4 Nf6 2. Nf3 d5 3. e3 e6 4. Bd3 c5 5. b3 cxd4 6. exd4 Nc6 7. O-O Bd6 8. Bb2 O-O 9. Ne5 Nb4 10. Be2 Qc7 [MOVE] 11. c3 [BOARD] White P_a2 P_f2 P_g2 P_h2 P_b3 P_c3 P_d4 N_b1 N_e5 B_b2 B_e2 R_a1 R_f1 Q_d1 K_g1 Black p_d5 p_e6 p_a7 p_b7 p_f7 p_g7 p_h7 n_b4 n_f6 b_d6 b_c8 r_a8 r_f8 q_c7 k_g8 [ATTACKS] White N_e5$n_f7 P_c3$n_b4 Black q_c7$P_c3 b_d6$N_e5 n_b4$P_a2 [MEDIUM]", max_new_tokens = 200))
+
