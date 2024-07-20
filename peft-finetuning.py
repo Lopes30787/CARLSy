@@ -1,3 +1,8 @@
+import os
+
+# Select GPUs
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from transformers import get_scheduler
 from transformers import Seq2SeqTrainer
@@ -17,22 +22,21 @@ import nltk
 
 import os
 
-from transformers import DataCollatorForSeq2Seq
+from transformers import DataCollatorForSeq2Seq, BitsAndBytesConfig
 
-from peft import get_peft_model, LoraConfig, TaskType
+from peft import get_peft_model, LoraConfig, TaskType, prepare_model_for_kbit_training
 
-# Select GPUs
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["TOKENIZERS_PARALLELISM"]= "false"
 
 peft_config = LoraConfig(
-    task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, r=16, lora_alpha=32, lora_dropout=0.01, target_modules = ["q", "v"]
+    task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, r=256, lora_alpha=512, lora_dropout=0.01, target_modules = ["q", "v"]
 )
 
 # Define Tokenizer and Model
 tokenizer = AutoTokenizer.from_pretrained("/cfs/home/u024219/Tese/CARLSy/flanT5-finetuned")
 tokenizer.model_max_length = 4096
-model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-base")
+model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-large", quantization_config = BitsAndBytesConfig(load_in_8bit=True))
+model = prepare_model_for_kbit_training(model)
 model = get_peft_model(model, peft_config)
 
 # Add Padding token if Tokenizer doesn't have one
@@ -46,7 +50,7 @@ df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/datasets/chess_dataset_extended_
 df = pd.DataFrame(df)
 df = df.dropna()
 
-df['Training'] ="[PGN]" + df['algebraic_notation'] + ["MOVE"] + df['move'] + "[BOARD]" + df['positions'] + "[ATTACKS] " + df['attacks'] 
+df['Training'] ="[PGN]" + df['algebraic_notation'] + "[MOVE]" + df['move'] + "[BOARD]" + df['positions'] + "[ATTACKS] " + df['attacks'] 
 
 # Load Dataset from Pandas DataFrame
 chess_dataset = Dataset.from_pandas(df)
@@ -69,18 +73,18 @@ chess_dataset = DatasetDict({
 def tokenize_function(examples):
    """Add prefix to the sentences, tokenize the text, and set the labels"""
    # The "inputs" are the tokenized answer:
-   inputs = [doc for doc in examples["Training"]]
-   model_inputs = tokenizer(inputs, max_length=512, truncation = True)
+   inputs = [doc for doc in examples['Training']]
+   model_inputs = tokenizer(inputs, max_length=1024, truncation = True)
   
    # The "labels" are the tokenized outputs:
    labels = tokenizer(text_target=examples["commentary"], 
-                      max_length=512,         
+                      max_length=512,
                       truncation=True)
 
    model_inputs["labels"] = labels["input_ids"]
    return model_inputs
 
-tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_columns =["id","algebraic_notation", "commentary", "Training"])
+tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_columns =["id","algebraic_notation", "commentary", "Training", "move", "positions", "attacks"])
 
 #print(tokenizer.convert_ids_to_tokens(tokenized_dataset["train"][0]["input_ids"]))
 #print(tokenized_dataset["train"][0])
@@ -89,8 +93,8 @@ data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 # Global Parameters
 L_RATE = 3e-4
-BATCH_SIZE = 4
-PER_DEVICE_EVAL_BATCH = 4
+BATCH_SIZE = 2
+PER_DEVICE_EVAL_BATCH = 2
 WEIGHT_DECAY = 0.01
 SAVE_TOTAL_LIM = 3
 NUM_EPOCHS = 5
@@ -98,7 +102,7 @@ MAX_LENGTH = 200
 
 # Set up training arguments
 training_args = Seq2SeqTrainingArguments(
-    output_dir="./results/tokenizer-finetuned/base-lora",
+    output_dir="./results/tokenizer-finetuned/large-lora",
     evaluation_strategy="epoch",
     learning_rate=L_RATE,
     per_device_train_batch_size=BATCH_SIZE,
@@ -111,7 +115,7 @@ training_args = Seq2SeqTrainingArguments(
     generation_max_length=MAX_LENGTH,
     report_to="tensorboard",
     gradient_accumulation_steps= 4,
-    logging_dir="./tb_logs/base-lora"
+    logging_dir="./tb_logs/large-lora"
 )
 
 def postprocess_text(preds, labels):
@@ -142,7 +146,7 @@ def compute_meteor_rouge(eval_preds):
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
     meteor_res = meteor.compute(predictions=decoded_preds, references=decoded_labels)
-    perplexity_res = perplexity.compute(predictions=decoded_preds, references=decoded_labels)
+    #perplexity_res = perplexity.compute(model_id = "google/flan-t5-base", add_start_token =False ,predictions=decoded_preds)
 
     # rougeLSum expects newline after each sentence
     decoded_preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds]
@@ -150,7 +154,7 @@ def compute_meteor_rouge(eval_preds):
 
     rouge_res = rouge.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
   
-    return meteor_res, rouge_res, perplexity_res
+    return meteor_res, rouge_res
 
 def compute_bleu(eval_preds):
     preds, labels = eval_preds
@@ -175,10 +179,10 @@ def compute_bleu(eval_preds):
     return result
 
 def compute_metrics(eval_preds):
-    meteor, rouge, perplexity = compute_meteor_rouge(eval_preds)
+    meteor, rouge = compute_meteor_rouge(eval_preds)
     bleu = compute_bleu(eval_preds)
 
-    return {'meteor': meteor, 'rouge': rouge, 'bleu': bleu, 'perplexity': perplexity}
+    return {'meteor': meteor, 'rouge': rouge, 'bleu': bleu}
 
 trainer = Seq2SeqTrainer(
     model = model,

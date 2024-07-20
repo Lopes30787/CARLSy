@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from transformers import get_scheduler
@@ -25,7 +25,8 @@ from transformers import DataCollatorForSeq2Seq
 os.environ["TOKENIZERS_PARALLELISM"]= "false"
 
 # Define Tokenizer and Model
-tokenizer = AutoTokenizer.from_pretrained("/cfs/home/u024219/Tese/CARLSy/flanT5-finetuned")
+#tokenizer = AutoTokenizer.from_pretrained("/cfs/home/u024219/Tese/CARLSy/flanT5-finetuned")
+tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-base")
 tokenizer.model_max_length = 4096
 model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-base")
 
@@ -40,7 +41,7 @@ if tokenizer.sep_token is None:
     model.resize_token_embeddings(len(tokenizer))
 
 # Put the dataset in a Pandas DataFrame
-df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/datasets/chess_dataset_cleanse.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
+df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/datasets/chess_dataset_final.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
 #df = pd.read_csv('C:\\Users\\afons\\Ambiente de Trabalho\\dataset\\chess_dataset.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
 df = pd.DataFrame(df)
 df = df.dropna()
@@ -82,6 +83,9 @@ def tokenize_function(examples):
 
 tokenized_dataset = chess_dataset.map(tokenize_function, batched=True, remove_columns =["id", "algebraic_notation", "commentary", "Training", "attacks", "move", "positions", "length"])
 
+print(tokenizer.convert_ids_to_tokens(tokenized_dataset["train"][0]["input_ids"]))
+print(tokenized_dataset["train"][0])
+
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
 # Global Parameters
@@ -90,12 +94,12 @@ BATCH_SIZE = 8
 PER_DEVICE_EVAL_BATCH = 8
 WEIGHT_DECAY = 0.01
 SAVE_TOTAL_LIM = 3
-NUM_EPOCHS = 5
+NUM_EPOCHS = 8
 MAX_LENGTH = 200
 
 # Set up training arguments
 training_args = Seq2SeqTrainingArguments(
-    output_dir="./results/tokenizer-finetuned/HP-HP-HP",
+    output_dir="./results/tokenizer-finetuned/FINAL-123",
     evaluation_strategy="epoch",
     learning_rate=L_RATE,
     per_device_train_batch_size=BATCH_SIZE,
@@ -108,7 +112,7 @@ training_args = Seq2SeqTrainingArguments(
     generation_max_length=MAX_LENGTH,
     report_to="tensorboard",
     gradient_accumulation_steps=4,
-    logging_dir="./tb_logs/HP-HP-HP"
+    logging_dir="./tb_logs/FINAL-123"
 )
 
 def postprocess_text(preds, labels):
@@ -175,41 +179,41 @@ def compute_metrics(eval_preds):
     return {'meteor': meteor, 'rouge': rouge, 'bleu': bleu}
 
 def model_init(trial):
-    return AutoModelForSeq2SeqLM.from_pretrained(
-        "google/flan-t5-base",
-    )
+    return model
 
 trainer = Seq2SeqTrainer(
     model = None,
     model_init= model_init,
     args = training_args,
     train_dataset = tokenized_dataset["train"],
-    eval_dataset = tokenized_dataset["valid"],
+    eval_dataset = tokenized_dataset["test"],
     tokenizer = tokenizer,
     data_collator = data_collator,
     compute_metrics=compute_metrics,
 )
 
-#trainer.train()
+trainer.train()
 
-
+import ray
 from ray import tune
 
-def compute_objective(eval_preds):
-    return {'bleu': compute_bleu(eval_preds)}
+ray.init(_temp_dir = "/cfs/home/u024219/Tese/CARLSy/ray")
+
+def compute_objective(metrics):
+    return metrics['eval_bleu']['bleu']
 
 def ray_hp_space(trial):
     return {
-        "learning_rate": tune.loguniform(1e-6, 1e-4),
-        "weight_decay": tune.loguniform(0.01, 0.2),
-        "per_device_train_batch_size": tune.choice([4,8]),
-        "num_train_epochs": tune.choice([3, 5, 7]),
-    }
+        #"learning_rate": tune.loguniform(1e-6, 1e-4),
+        #"weight_decay": tune.loguniform(0.01, 0.2),
+        #"per_device_train_batch_size": tune.choice([4,8]),
+        "num_train_epochs": tune.choice([10]),
+}
 
-trainer.hyperparameter_search(
-    direction="maximize", 
-    backend="ray", 
-    hp_space= ray_hp_space,
-    n_trials=20, # number of trials
-    compute_objective=compute_objective
-)
+#trainer.hyperparameter_search(
+#    direction="maximize", 
+#    backend="ray", 
+#    hp_space= ray_hp_space,
+#    n_trials=1, # number of trials
+#    compute_objective=compute_objective
+#)

@@ -11,7 +11,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["TOKENIZERS_PARALLELISM"]= "false"
 
 # Define Old_Tokenizer
-old_tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small")
+old_tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-base")
 
 # Put the dataset in a Pandas DataFrame
 df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/datasets/chess_dataset_extended_with_move.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
