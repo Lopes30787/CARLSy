@@ -7,7 +7,9 @@ from langdetect import LangDetectException
 
 DetectorFactory.seed = 0
 
-directory = "C:\\Users\\afons\\Ambiente de Trabalho\\dataset\\gameknot"
+# Path for folder that contains the PGN files
+directory = 
+
 field = ["id", "algebraic_notation", "move", "positions", "attacks", "commentary", "length"]
 
 commentary_sizes = []
