@@ -35,7 +35,6 @@ if tokenizer.pad_token is None:
 
 # Put the dataset in a Pandas DataFrame
 df = pd.read_csv('/cfs/home/u024219/Tese/CARLSy/chess_dataset.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
-#df = pd.read_csv('C:\\Users\\afons\\Ambiente de Trabalho\\dataset\\chess_dataset.csv', sep='|', skipinitialspace= True, encoding_errors='ignore')
 df = pd.DataFrame(df)
 
 df['Notation:Commentary'] = df['algebraic_notation'] + ": " + df['commentary']
